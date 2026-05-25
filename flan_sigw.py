@@ -22,7 +22,17 @@ def Omega_gw_semianalitic(k, Delta_zeta):
     s  = 10**np.arange(0, 3, 0.005)  
     y = T_rad(q[:, None, None], s[None, :, None])*Delta_zeta(0.5*k[None, None, :]*(q[:, None, None] + s[None, :, None]))*Delta_zeta(0.5*k[None, None, :]*(s[None, :, None]-q[:, None, None]))
     return scipy.integrate.trapezoid(scipy.integrate.trapezoid(y, s, axis = 1), q, axis = 0)
+
+def jackknife_mean_std(X):
+    M = len(X)
     
+    theta_i = (torch.sum(X) - X) / (M - 1)
+    
+    mean = torch.mean(theta_i)
+    std_jackknife = torch.sqrt(torch.mean((M - 1) * (mean - theta_i)**2))
+    
+    return mean, std_jackknife
+
 def generate_gaussian_field_x(N, L, Delta_X, device=torch.device('cpu')):
     dx3 = (L/N)**3
     P_X = lambda k: Delta_X(k)*2.*np.pi**2/k**3
@@ -60,7 +70,7 @@ def generate_gaussian_field_k(N, L, Delta_X, device=torch.device('cpu')):
 
 def generate_nongaussian_field_k(N, L, Delta_X_gauss, F_NL, G_NL, device = torch.device('cpu')):
     X_gauss = generate_gaussian_field_x(N, L, Delta_X_gauss, device = device)
-    X = X_gauss + F_NL*X_gauss**2 + G_NL*X_gauss**3
+    X = X_gauss + F_NL*(X_gauss**2) + G_NL*X_gauss**3
     dx3 = (L/N)**3   
     X_k = torch.fft.rfftn(X, s=(N, N, N), dim=(0, 1, 2))*dx3
     return X_k
